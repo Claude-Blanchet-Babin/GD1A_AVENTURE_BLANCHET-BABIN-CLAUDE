@@ -3,7 +3,7 @@
  <tileset firstgid="1" name="tileset" tilewidth="32" tileheight="32" tilecount="910" columns="35">
   <image source="tileset.png" width="1120" height="832"/>
  </tileset>
- <imagelayer id="2" name="modele" visible="0" opacity="0.53" offsetx="128" offsety="64">
+ <imagelayer id="2" name="modele" opacity="0.53" offsetx="128" offsety="64">
   <image source="jardin.png" width="3904" height="2976"/>
  </imagelayer>
  <layer id="4" name="sol" width="130" height="94">
