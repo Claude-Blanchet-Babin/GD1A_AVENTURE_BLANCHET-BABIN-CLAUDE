@@ -8,6 +8,8 @@ var positionCrypte = 0
 var tileset
 var keySpace
 var jardinTocimetiere = false
+var intangible = false
+var collisiongrille
 
 // variables de la carte du jardin
 var carteDuJardin
@@ -161,6 +163,7 @@ class jardin extends Phaser.Scene{
 
         // affichage du personnage
         player = this.physics.add.sprite(2080, 256, 'perso');
+        player.setSize(15,3).setOffset(8,45);
 
 
         // reprendre l'affichage du des calques en mettant le decor
@@ -200,6 +203,10 @@ class jardin extends Phaser.Scene{
         calque_obstacle_ja.setCollisionByProperty({ solide: true });
         calque_fontaine_ja.setCollisionByProperty({ solide: true });
 
+        calque_grille_ja.setCollisionByProperty({ solide: true });
+
+
+
 
         // affichage de l'objet débloquant la nouvelle capacité
 
@@ -223,6 +230,12 @@ class jardin extends Phaser.Scene{
         this.physics.add.collider(player, calque_trou_ja,);
         this.physics.add.collider(player, calque_obstacle_ja,);
         this.physics.add.collider(player, calque_fontaine_ja,);
+
+
+
+        collisiongrille = this.physics.add.collider(player, calque_grille_ja);
+
+        
 
         // création de la caméra
         // taille de la caméra
@@ -282,6 +295,17 @@ class jardin extends Phaser.Scene{
             this.sceneCimetiere();
             jardinTocimetiere = true;
         };
+
+        console.log (intangible)
+        if (keySpace.isDown){
+            intangible = true;
+
+            collisiongrille.active = false;
+
+            this.time.delayedCall(3000, () => {
+                collisiongrille.active = true;
+            });  
+        }
             
     }
 
