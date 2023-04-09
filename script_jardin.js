@@ -3,19 +3,95 @@
 var player
 var cursors
 var controller
-var position = 3200
-var positionCrypte = 0
 var tileset
 var keySpace
 var atk
 var shift
 var interagir
 var intangible = false
-var collisiongrille
+var vol = false
 var PLAYER_SPEED = 200
-var jardinTocimetiere = false
-var positionCimetiere
+var playerDegat = false 
+var playerLife = 5 
+var playerOpacity
 
+// collision
+var collisiongrille
+var collisiontrou
+var collisioneau
+
+var obtention
+var flaconAcquis = true
+var aileAcquis = false
+var feuAcquis = false
+
+// interface
+var flacon
+var aile
+var blocFlacon
+var blocAile
+var blocBleu
+var blocRouge
+var scorePiece
+var scoreBleu
+var scoreRouge
+var textBox
+var lifeUI
+
+// collectable
+var piece1
+var piece2
+var piece3
+var piece4
+var piece5
+var piece6
+var piece7
+var piece8
+var piece9
+var piece10
+
+var nombre = 0
+var nombreBleu = 0
+var nombreRouge = 0
+
+var coeur1
+var coeur2
+var coeur3
+
+// obstacle
+
+var brume1
+var brume2
+var brume3
+
+// ennemi
+
+var ennemi1
+var ennemi2
+var ennemi3
+
+var poursuite1 = false
+var poursuite2 = false
+
+var ennemi1InitialX = 1535
+var ennemi1TargetX = 1900
+var ennemi1Speed = 50
+var ennemi1Direction = 1
+
+var mort1 = false
+var mort2 = false
+var mort3 = false
+
+var loot1
+var loot2
+var loot3
+
+// element externe
+
+var torche1
+var torcheFeu1
+var torche2
+var torcheFeu2
 
 
 // variables de la carte du jardin
@@ -32,31 +108,6 @@ var calque_decor_ja
 var calque_decor_bis_ja
 
 
-// variables de la carte du cimetière
-var carteDuCimetiere
-var calque_sous_sol_ci
-var calque_sol_ci
-var calque_sur_sol_ci
-var calque_obstacle_ci
-var calque_trou_ci
-var calque_eau_ci
-var calque_grille_ci
-var calque_chapelle_ci
-var calque_decor_ci
-var calque_decor_bis_ci
-var calque_decor_tres_ci
-
-// variables de la carte de la crypte
-
-var carteDuCrypte
-var calque_sol_cr
-var calque_grille_cr
-var calque_obstacle_cr
-var calque_eau_cr
-var calque_rocher_cr
-var calque_trou_cr
-var calque_decor_cr
-
 export class jardin extends Phaser.Scene{
     constructor(){
         super("jardin");
@@ -69,20 +120,50 @@ export class jardin extends Phaser.Scene{
         this.load.image("Phaser_tuilesdejeu","assetsjeu/image/tileset.png");
         this.load.tilemapTiledJSON("cartejardin","assetsjeu/carte_jardin.json")
 
-        // chargement de l'interface utilisateur et des collectables
+        // chargement de l'interface utilisateur
         this.load.image("cadre","assetsjeu/image/cadre_ui.png");
+        this.load.image("bloc_flacon","assetsjeu/image/bloc_flacon.png");
+        this.load.image("bloc_aile","assetsjeu/image/bloc_aile.png");
+        this.load.image("bloc_bleu","assetsjeu/image/bloc_bleu.png");
+        this.load.image("bloc_rouge","assetsjeu/image/bloc_rouge.png");
+        this.load.image("piece_ui","assetsjeu/image/piece_ui.png");
+        this.load.image("textbox","assetsjeu/image/textbox.png");
+        this.load.spritesheet("niveauVie","assetsjeu/image/vie.png",
+        {frameWidth : 100, frameHeight: 100});
+
+        // chargement des collectables
+        this.load.image("flacon","assetsjeu/image/flacon.png");
+        this.load.image("aile","assetsjeu/image/aile.png");
+        this.load.image("flamme_bleu","assetsjeu/image/flamme_bleu.png");
+        this.load.image("flamme_rouge","assetsjeu/image/flamme_rouge.png");
+        this.load.image("lumiere","assetsjeu/image/lumiere_alpha.png");
+        this.load.image("piece","assetsjeu/image/piece.png");
+
+        // chargement des elements externes
+        this.load.image("nuage","assetsjeu/image/nuage.png");
+        this.load.image("pierre","assetsjeu/image/rocher.png");
+        this.load.image("pierre_2a","assetsjeu/image/pierre_2a.png");
+        this.load.image("pierre_2b","assetsjeu/image/pierre_2b.png");
+        this.load.image("pierre_3a","assetsjeu/image/pierre_3a.png");
+        this.load.image("pierre_3b","assetsjeu/image/pierre_3b.png");
+        this.load.image("pierre_4","assetsjeu/image/pierre_4.png");
+        this.load.image("pierre_6a","assetsjeu/image/pierre_6a.png");
+        this.load.image("pierre_6b","assetsjeu/image/pierre_6b.png");
+        this.load.image("pierre_9","assetsjeu/image/pierre_9.png");
+        this.load.image("torche","assetsjeu/image/torche.png");
+        this.load.image("torche_feu","assetsjeu/image/torche_feu.png");
 
         // chargement du personnage
         this.load.spritesheet("perso","assetsjeu/image/perso.png",
         { frameWidth: 96, frameHeight: 128 });  
         
         // chargement des ennemis
+        this.load.spritesheet("ennemi_alpha","assetsjeu/image/ennemi_alpha_animation.png",
+        { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet("ennemi_beta","assetsjeu/image/ennemi_beta_animation.png",
+        { frameWidth: 96, frameHeight: 64 });
 
     }
-
-    // création des variables
-
-
 
     // création du niveau
     create(){
@@ -98,7 +179,6 @@ export class jardin extends Phaser.Scene{
 
         // affichage des calques
  
-
         calque_sous_sol_ja = carteDuJardin.createLayer(
             "soussol",
             tileset
@@ -141,7 +221,7 @@ export class jardin extends Phaser.Scene{
 
         // affichage du personnage
         player = this.physics.add.sprite(2080, 256, 'perso');
-        player.setSize(24,3).setOffset(37,90);
+        player.setSize(20,15).setOffset(38,75);
 
 
         // reprendre l'affichage du des calques en mettant le decor
@@ -195,36 +275,127 @@ export class jardin extends Phaser.Scene{
             key: 'attaque',
             frames: this.anims.generateFrameNumbers('perso', {start:25,end:29}),
             frameRate: 10,
-            repeat: 0
+            repeat: -1,
         });    
 
     
 
 
         // affichage des ennemis
+        ennemi1 = this.physics.add.sprite(1535,1680,"ennemi_alpha");
+        ennemi1.setSize(25,32).setOffset(20,20);
+
+        //ennemi1 = this.physics.add.sprite(1535,1680,"ennemi_alpha");
+        //ennemi1.setSize(25,32).setOffset(20,20);
+        //ennemi1.setVelocityX(ennemi1Speed * ennemi1Direction);
+
+        ennemi2 = this.physics.add.sprite(730,2350,"ennemi_alpha");
+        ennemi2.setSize(25,32).setOffset(20,20);
+
+        ennemi3 = this.physics.add.sprite(900,920,"ennemi_alpha");
+        ennemi3.setSize(25,32).setOffset(20,20);
+
+        // affichage de leur loot et de l'intercation possible avec le joueur
+        loot1 = this.physics.add.sprite(1535,1680,"flamme_bleu").setVisible(false);
+        this.physics.add.overlap(player,loot1,this.recuperation1,null,this);
+
+        loot2 = this.physics.add.sprite(730,2350,"flamme_bleu").setVisible(false);
+        this.physics.add.overlap(player,loot2,this.recuperation2,null,this);
+
+        loot3 = this.physics.add.sprite(1075,850,"flamme_bleu").setVisible(false);
+        this.physics.add.overlap(player,loot3,this.recuperation3,null,this);
+
+
+        // créer les animations des ennemis
+        this.anims.create({
+            key: 'alpha',
+            frames: this.anims.generateFrameNumbers('ennemi_alpha', {start:0,end:33}),
+            frameRate: 5,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'beta',
+            frames: this.anims.generateFrameNumbers('ennemi_beta', {start:0,end:43}),
+            frameRate: 5,
+            repeat: -1
+        });
+
+
+
         // définition de leur comportement
 
-        // définir les collisions
+        this.tweens.add({
+            targets : ennemi1,
+            x: 930,
+            duration: 1900,
+            repeat : -1,
+            yoyo : true
+        });
 
-        calque_eau_ja.setCollisionByProperty({ solide: true });
-        calque_trou_ja.setCollisionByProperty({ solide: true });
-        calque_obstacle_ja.setCollisionByProperty({ solide: true });
-        calque_fontaine_ja.setCollisionByProperty({ solide: true });
+        this.tweens.add({
+            targets : ennemi2,
+            x: 930,
+            duration: 2500,
+            repeat : -1,
+            yoyo : true
+        });
 
-        calque_grille_ja.setCollisionByProperty({ solide: true });
+        this.tweens.add({
+            targets : ennemi3,
+            x: 1400,
+            duration: 6000,
+            repeat : -1,
+            yoyo : true
+        });
 
+        // definir les collisions entre les ennemis et le decor
+        this.physics.add.collider(ennemi1, calque_obstacle_ja,);
+        this.physics.add.collider(ennemi2, calque_obstacle_ja,);
+        this.physics.add.collider(ennemi3, calque_obstacle_ja,);
 
 
 
         // affichage de l'objet débloquant la nouvelle capacité
+        flacon = this.physics.add.image(320,2850,"flacon");
 
         // affichage des pièces pouvant être ramassées pour faire monter le score
+        piece1 = this.physics.add.image(250,250,"piece");
+        piece2 = this.physics.add.image(3900,250,"piece");
+        piece3 = this.physics.add.image(3900,1325,"piece");
+        piece4 = this.physics.add.image(3850,2100,"piece");
+        piece5 = this.physics.add.image(3400,2080,"piece");
+        piece6 = this.physics.add.image(2370,2080,"piece");
+        piece7 = this.physics.add.image(2080,1000,"piece");
+        piece8 = this.physics.add.image(2900,1000,"piece");
+        piece9 = this.physics.add.image(320,2100,"piece");
+        piece10 = this.physics.add.image(1720,2550,"piece");
 
         // affichage des fragments de lumière permettant de faire remonter la vie du personnage
+        coeur1 = this.physics.add.image(250,1325,"lumiere");
+        coeur2 = this.physics.add.image(2880,1560,"lumiere");
+        coeur3 = this.physics.add.image(3850,2850,"lumiere");
+
+        // affichage de la brume
+        brume1 = this.physics.add.image(1520,2280,"nuage");
+        brume1.body.setImmovable(true);
+        brume2 = this.physics.add.image(2550,2080,"nuage");
+        brume2.body.setImmovable(true);
+        brume3 = this.physics.add.image(3200,2080,"nuage");
+        brume3.body.setImmovable(true);
+
+        // affichage des torches et preparation de l'interaction avec
+        torche1 = this.physics.add.image(1300,850,"torche").setVisible(false);
+        torcheFeu1 = this.physics.add.image(1300,850,"torche_feu");
+        torche2 = this.physics.add.image(600,850,"torche");
+        torcheFeu2 = this.physics.add.image(600,850,"torche_feu").setVisible(false);
+
+        this.physics.add.overlap(player, torcheFeu1, this.lumiere1, null,this);
+        this.physics.add.overlap(player, torche2, this.allume2, null,this);
     
         // création de la détéction du clavier
         cursors = this.input.keyboard.createCursorKeys();
-        // intégration de la barre espace
+        // intégration des nouvelles touches
         keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         atk = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
         shift = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
@@ -235,18 +406,26 @@ export class jardin extends Phaser.Scene{
             controller = pad;
         });
 
+        // définir les collisions
+
+        calque_eau_ja.setCollisionByProperty({ solide: true });
+        calque_trou_ja.setCollisionByProperty({ solide: true });
+        calque_obstacle_ja.setCollisionByProperty({ solide: true });
+        calque_fontaine_ja.setCollisionByProperty({ solide: true });
+        calque_grille_ja.setCollisionByProperty({ solide: true });
+
         // faire en sorte que le joueur collide avec les obstacles
 
-        this.physics.add.collider(player, calque_eau_ja,);
-        this.physics.add.collider(player, calque_trou_ja,);
         this.physics.add.collider(player, calque_obstacle_ja,);
         this.physics.add.collider(player, calque_fontaine_ja,);
 
-
-
+        // integration de la collision avec une variable pour pouvoir la désactiver ensuite
         collisiongrille = this.physics.add.collider(player, calque_grille_ja);
 
-        
+        // faire en sorte que le joueur collide avec la brume
+        this.physics.add.collider(player, brume1,);
+        this.physics.add.collider(player, brume2,);
+        this.physics.add.collider(player, brume3,);
 
         // création de la caméra
         // taille de la caméra
@@ -257,24 +436,82 @@ export class jardin extends Phaser.Scene{
         this.cameras.main.setDeadzone(100,100);
         this.cameras.main.setBounds(0,0,4160,3456);
 
+        console.log(playerLife)
         // affichage de l'interface utilisateur
         this.add.sprite(0,0,"cadre").setOrigin(0,0).setScrollFactor(0);
+        this.add.sprite(550,40,"piece_ui").setOrigin(0,0).setScrollFactor(0);
+        blocFlacon = this.add.sprite(2,110,"bloc_flacon").setVisible(false).setOrigin(0,0).setScrollFactor(0);
+        blocAile = this.add.sprite(2,180,"bloc_aile").setVisible(false).setOrigin(0,0).setScrollFactor(0);
+        blocBleu = this.add.sprite(2,250,"bloc_bleu").setVisible(false).setOrigin(0,0).setScrollFactor(0);
+        blocRouge = this.add.sprite(2,320,"bloc_rouge").setVisible(false).setOrigin(0,0).setScrollFactor(0);
+        textBox = this.add.sprite(100,260,"textbox").setVisible(false).setOrigin(0,0).setScrollFactor(0);
+        lifeUI = this.add.sprite(40,10,"niveauVie").setOrigin(0,0).setScrollFactor(0);
+        scorePiece = this.add.text(620,50,"0",{fontSize:'40px',fill:'#FFFFFF', fontWeight : 'bold'}).setOrigin(0,0).setScrollFactor(0);
+        scoreBleu = this.add.text(55,275,"0",{fontSize:'20px',fill:'#FFFFFF', fontWeight : 'bold'}).setVisible(false).setOrigin(0,0).setScrollFactor(0);
+        scoreRouge = this.add.text(55,345,"0",{fontSize:'20px',fill:'#FFFFFF', fontWeight : 'bold'}).setVisible(false).setOrigin(0,0).setScrollFactor(0);
 
         // séparation des calques selon l'effet souhaité sur le personnage
 
         // le joueur prend des dégâts s'il touche l'eau
+        collisioneau = this.physics.add.collider(player, calque_eau_ja, this.degat, null, this);
 
         // le joueur est téléporté au début du niveau s'il tombe dans un trou
+        collisiontrou = this.physics.add.collider(player, calque_trou_ja, this.chute, null, this);
 
         // le personnage perd de la vie s'il touche un ennemi
+        this.physics.add.collider(player, ennemi1, this.degat, null, this);
+        this.physics.add.collider(player, ennemi2, this.degat, null, this);
 
         // le score change s'il attrape une pièce
+        this.physics.add.overlap(player,piece1,this.collecte1,null,this);
+        this.physics.add.overlap(player,piece2,this.collecte2,null,this);
+        this.physics.add.overlap(player,piece3,this.collecte3,null,this);
+        this.physics.add.overlap(player,piece4,this.collecte4,null,this);
+        this.physics.add.overlap(player,piece5,this.collecte5,null,this);
+        this.physics.add.overlap(player,piece6,this.collecte6,null,this);
+        this.physics.add.overlap(player,piece7,this.collecte7,null,this);
+        this.physics.add.overlap(player,piece8,this.collecte8,null,this);
+        this.physics.add.overlap(player,piece9,this.collecte9,null,this);
+        this.physics.add.overlap(player,piece10,this.collecte10,null,this);
 
         // la vie remonte s'il ramasse un fragment de lumière
+        this.physics.add.overlap(player,coeur1,this.soin1,null,this);
+        this.physics.add.overlap(player,coeur2,this.soin2,null,this);
+        this.physics.add.overlap(player,coeur3,this.soin3,null,this);
 
         // le personnage obtient une nouvelle capacité s'il ramasse un objet
+        this.physics.add.overlap(player,flacon,this.obtention,null,this);
 
         // création des différents niveaux de vie dans l'interface
+        this.anims.create({
+            key: 'vie5',
+            frames: [{ key: 'niveauVie' , frame :  0}],
+        })
+    
+        this.anims.create({
+            key: 'vie4',
+            frames: [{ key: 'niveauVie' , frame :  1}],
+        })
+    
+        this.anims.create({
+            key: 'vie3',
+            frames: [{ key: 'niveauVie' , frame :  2}],
+        })
+    
+        this.anims.create({
+            key: 'vie2',
+            frames: [{ key: 'niveauVie' , frame :  3}],
+        })
+    
+        this.anims.create({
+            key: 'vie1',
+            frames: [{ key: 'niveauVie' , frame :  4}],
+        })
+    
+        this.anims.create({
+            key: 'vie0',
+            frames: [{ key: 'niveauVie' , frame :  5}],
+        })
     }
 
     // mise à jour des éléments au fil de l'avancement du joueur dans le niveau
@@ -338,26 +575,343 @@ export class jardin extends Phaser.Scene{
             player.anims.play('idle',true); 
         }
 
+        if (atk.isDown &&!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown){ 
+
+            player.anims.play('attaque',true); 
+        }
+
+        // animation de la jauge de vie
+        if (playerLife == 5){
+            lifeUI.anims.play('vie5', true);
+        }
+        if (playerLife == 4){
+            lifeUI.anims.play('vie4', true);
+        }
+        if (playerLife == 3){
+            lifeUI.anims.play('vie3', true);
+        }
+        if (playerLife == 2){
+            lifeUI.anims.play('vie2', true);
+        }
+        if (playerLife == 1){
+            lifeUI.anims.play('vie1', true);
+        }
+        if (playerLife == 0){
+            lifeUI.anims.play('vie0', true);
+        }
+
+        // animation des ennemis
+        ennemi1.anims.play('alpha',true);
+        ennemi2.anims.play('alpha',true);
+        ennemi3.anims.play('alpha',true);
+
+        // vérifier la position du joueur par rapport à un ennemi afin que celui le poursuive
+        // Calculer la distance entre le joueur et l'ennemi1
+        var distance1 = Phaser.Math.Distance.Between(player.x, player.y, ennemi1.x, ennemi1.y);
+
+
+        // Si la distance est inférieure à 50 pixels, l'ennemi1 suit le joueur
+        //if (!poursuite1 && distance1 < 200) {
+
+        //    ennemi1.setVelocity(0);
+        //    poursuite1 = true
+        //}
+
+        //if (poursuite1){
+            // Calculez le vecteur de direction du joueur à l'ennemi1
+        //    var directionX = player.x - ennemi1.x;
+        //    var directionY = player.y - ennemi1.y;
+
+            // supprimer la routine de deplacement
+
+            // Normalisez le vecteur de direction
+        //    var length = Math.sqrt(directionX * directionX + directionY * directionY);
+        //    directionX /= length;
+        //    directionY /= length;
+
+            // Déplacez l'ennemi1 dans la direction du joueur avec une vitesse de 2 pixels par frame
+        //    ennemi1.x += directionX * 1;
+        //    ennemi1.y += directionY * 1;
+        
+
+        //} else {
+
+            // Si l'ennemi1 ne suit pas le joueur, vérifier s'il a atteint sa position cible ou sa position initiale
+        //    if ((ennemi1.x <= ennemi1InitialX && ennemi1Direction === -1) || (ennemi1.x >= ennemi1TargetX && ennemi1Direction === 1)) {
+        //        ennemi1Direction *= -1; // Inverser la direction de déplacement de l'ennemi1
+        //        ennemi1.setVelocityX(ennemi1Speed * ennemi1Direction); // Mettre à jour la vitesse horizontale de l'ennemi1 dans sa nouvelle direction
+        //    }
+        //}
+
+        // vérifier la position du joueur par rapport à l'ennemi pour le détruire
+
+        if (distance1 <100 && atk.isDown){
+            ennemi1.disableBody(true,true);
+            mort1 = true;
+            // faire apparaitre un loot 
+            loot1.setVisible(true);
+        }
+        
+
+        // faire la même chose pour le deuxième ennemi
+        var distance2 = Phaser.Math.Distance.Between(player.x, player.y, ennemi2.x, ennemi2.y);
+        if (distance2 <100 && atk.isDown){
+            //this.x = ennemi2.x;
+            //this.y = ennemi2.y;
+            ennemi2.disableBody(true,true);
+            mort2 = true;
+            loot2.setVisible(true);
+
+            // faire apparaitre le loot à l'endroit de la mort de l'ennemi
+            // problème : il y a trop d'apparitions
+            //this.loot = this.physics.add.sprite(this.x, this.y, 'flamme_bleu');
+            //this.physics.add.overlap(player, this.loot, () => {
+                //nombreBleu = nombreBleu +1;
+               // scoreBleu.setText ( + nombreBleu);
+                //this.loot.destroy();
+            //});
+        }
+
+
+
+        
+
+        // vérifier si les 2 ennemis du jardin en bas à gauche sont mort pour faire disparaitre la brume
+        if (mort1 == true && mort2 == true){
+            brume1.disableBody(true,true);
+        }
+
+
+
+        // vérifier la position du joueur pour lancer le changement de scène
         if (player.y <= 50){ 
             this.sceneCimetiere();
-            jardinTocimetiere = true;
         };
 
+        // activation de la capacité à devenir intangible
         console.log (intangible)
-        if (keySpace.isDown){
-            intangible = true;
+        if (shift.isDown && flaconAcquis == true){
 
+            intangible = true;
             collisiongrille.active = false;
+            player.alpha = 0.3;
 
             this.time.delayedCall(3000, () => {
                 collisiongrille.active = true;
+                intangible = false;
+                player.alpha = 1;
             });  
+        }
+
+        // activation de la capacité à voler
+        if (keySpace.isDown && aileAcquis == true){
+
+            vol = true;
+            collisioneau.active = false;
+            collisiontrou.active = false;
+            player.setScale(1.5);
+
+            this.time.delayedCall(3000, () => {
+                collisioneau.active = true;
+                collisiontrou.active = true;
+                player.setScale(1);
+                vol = false;
+            });  
+        }
+
+        // vérifier si le joueur possède des flammes bleues pour les afficher dans l'inventaire
+        if (nombreBleu > 0){
+            blocBleu.setVisible(true);
+            scoreBleu.setVisible(true);
+        }
+
+        // vérifier si le joueur possède des flammes rouges pour les afficher dans l'inventaire
+        if (nombreRouge > 0){
+            blocRouge.setVisible(true);
+            scoreRouge.setVisible(true);
         }
             
     }
 
+    degat(){
+
+        // vérifier que le cooldown de degat est disponible
+        if (playerDegat == false && intangible == false){
+            
+
+            // retirer de la vie au joueur
+            // répercuter directement dans la jauge de vie
+            playerLife = playerLife - 1;
+            playerDegat = true;
+            playerOpacity = true;
+    
+            // montrer l'invulnérabilité du personnage ne le faisant clignoter avec l'opacité
+            this.time.addEvent({        
+                delay : 100,
+                callback : () => {
+                    if(playerOpacity){
+                        player.alpha = 0.25;
+                        playerOpacity = false
+                    }
+                    else {
+                        player.alpha = 1;
+                        playerOpacity = true;
+                    }
+                },
+                repeat : 19
+            })
+    
+            // activation du cooldown de degat
+            this.time.delayedCall(2000, () => {
+                playerDegat = false;
+                player.alpha = 1;
+            });  
+        }
+    }
+
+    chute(){
+        player.x = 2080
+        player.y = 256
+        if (nombre >> 0){
+            nombre = nombre -1;
+        }
+        scorePiece.setText ( + nombre);
+    }
+
+    obtention(){
+
+        // l'icone de l'objet ramassé apparait dans l'interface
+        blocFlacon.setVisible(true);
+        // l'objet disparait de la carte
+        flacon.disableBody(true,true);
+        // activer la variable pour rendre disponible la nouvelle capacité
+        flaconAcquis = true;
+    
+        // affichage d'un message expliquant la situation
+        //info=this.add.text(150,75,"Pingi a ramassé",{fontSize:'50px',fill:'#FF7F00'}).setScrollFactor(0);
+        //objet=this.add.text(210,125,"un PIOLET !",{fontSize:'50px',fill:'#FF7F00'}).setScrollFactor(0);
+        //fonction=this.add.text(50,210,"il peut désormais s'accrocher aux murs et ralentir sa chute",{fontSize:'18px',fill:'#FF7F00'}).setScrollFactor(0);
+        //comment=this.add.text(20,230,"pour cela, continuez d'avancer vers le mur en étant collé à lui",{fontSize:'18px',fill:'#FF7F00'}).setScrollFactor(0);
+        // le laisser afficher pendant quelques secondes avant de le faire disparaitre
+        //setTimeout(() => {
+       //     info.destroy();
+        //    objet.destroy();
+        //    fonction.destroy();
+        //    comment.destroy();
+        //},7000);
+    }
 
 
+    // ramassage des pièces
+    collecte1(){
+        piece1.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte2(){
+        piece2.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte3(){
+        piece3.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte4(){
+        piece4.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte5(){
+        piece5.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte6(){
+        piece6.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte7(){
+        piece7.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte8(){
+        piece8.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte9(){
+        piece9.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+    collecte10(){
+        piece10.disableBody(true,true);
+        nombre = nombre +1;
+        scorePiece.setText ( + nombre);
+    }
+
+    // vérifier si la vie du joueur est pleine avant de le soigner
+    soin1(){
+        if (playerLife <= 4){
+            coeur1.disableBody(true,true);
+            playerLife = playerLife +1;
+        }
+    }
+    soin2(){
+        if (playerLife <= 4){
+            coeur2.disableBody(true,true);
+            playerLife = playerLife +1;
+        }
+    }
+    soin3(){
+        if (playerLife <= 4){
+            coeur3.disableBody(true,true);
+            playerLife = playerLife +1;
+        }
+    }
+
+    recuperation1(){
+        loot1.disableBody (true,true);
+        nombreBleu = nombreBleu +1;
+        scoreBleu.setText ( + nombreBleu);
+    }
+
+    recuperation2(){
+        loot2.disableBody (true,true);
+        nombreBleu = nombreBleu +1;
+        scoreBleu.setText ( + nombreBleu);
+    }
+
+    recuperation3(){
+        loot3.disableBody (true,true);
+        nombreBleu = nombreBleu +1;
+        scoreBleu.setText ( + nombreBleu);
+    }
+
+    lumiere1(){
+        var distance3 = Phaser.Math.Distance.Between(player.x, player.y, ennemi3.x, ennemi3.y);
+        if (distance3 <100 && atk.isDown){
+            ennemi3.disableBody(true,true);
+            mort3 = true;
+            // faire apparaitre un loot 
+            loot3.setVisible(true);
+        }
+    }
+
+    allume2(){
+        if (nombreBleu > 0 && interagir.isDown){
+            torche2.disableBody (true,true);
+            torcheFeu2.setVisible(true);
+            nombreBleu = nombreBleu -1;
+            scoreBleu.setText ( + nombreBleu);
+        }
+    }
+
+    // lancer la scène cimetière et prévenir quelle entré doir être utilisé
     sceneCimetiere(){
         this.scene.start("cimetiere",{entrance : "jardin"})
 
