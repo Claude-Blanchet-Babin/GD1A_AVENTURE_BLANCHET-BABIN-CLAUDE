@@ -22,7 +22,7 @@ export class menu extends Phaser.Scene{
     }
 
     sceneExterieur(){
-        this.scene.start("jardin")
+        this.scene.start("jardin",{entrance : "menu"})
     }
 
 };

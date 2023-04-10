@@ -20,9 +20,10 @@ var collisiongrille
 var collisiontrou
 var collisioneau
 
+//competence
 var obtention
 var flaconAcquis = true
-var aileAcquis = true
+var aileAcquis = false
 var feuAcquis = false
 
 // interface
@@ -37,6 +38,16 @@ var scoreBleu
 var scoreRouge
 var textBox
 var lifeUI
+var gameOver
+var lockTouche = false
+
+// texte
+
+var over1
+var over2
+
+var aile1
+var aile2
 
 // collectable
 var piece1
@@ -50,9 +61,9 @@ var piece8
 var piece9
 var piece10
 
-var nombre = 0
-var nombreBleu = 0
-var nombreRouge = 0
+var nombre
+var nombreBleu
+var nombreRouge
 
 var coeur1
 var coeur2
@@ -108,6 +119,10 @@ export class cimetiere extends Phaser.Scene{
 
     init(data){
         this.entrance = data.entrance
+        this.majVie = data.transfertVie
+        this.majGold = data.transfertGold
+        this.majBleu = data.transfertBleu
+        this.majRouge = data.transfertRouge
     }
 
 
@@ -221,7 +236,7 @@ export class cimetiere extends Phaser.Scene{
         // affichage du personnage
 
         if (this.entrance == "jardin"){
-            player = this.physics.add.sprite(2080, 416, 'perso'); //3200
+            player = this.physics.add.sprite(2080, 3200, 'perso'); //3200
             player.setSize(20,15).setOffset(38,75);
         }
 
@@ -320,6 +335,12 @@ export class cimetiere extends Phaser.Scene{
         // affichage des pièces pouvant être ramassées pour faire monter le score
 
         // affichage des fragments de lumière permettant de faire remonter la vie du personnage
+
+        // affichage de la brume
+        brume1 = this.physics.add.image(900,1175,"nuage");
+        brume1.body.setImmovable(true);
+        brume2 = this.physics.add.image(1075,2500,"nuage");
+        brume2.body.setImmovable(true);
     
         // création de la détéction du clavier
         cursors = this.input.keyboard.createCursorKeys();
@@ -331,8 +352,8 @@ export class cimetiere extends Phaser.Scene{
 
         // intégrer les commandes d'une manette
         this.input.gamepad.once('connected', function (pad) {
-            controller = pad;
-        });
+            this.controller = pad;
+        },this);
 
         // définir les collisions
         calque_obstacle_ci.setCollisionByProperty({ solide: true });
@@ -347,7 +368,8 @@ export class cimetiere extends Phaser.Scene{
         collisiongrille = this.physics.add.collider(player, calque_grille_ci);
 
         // faire en sorte que le joueur collide avec la brume
-
+        this.physics.add.collider(player, brume1,);
+        this.physics.add.collider(player, brume2,);
 
         // création de la caméra
         // taille de la caméra
@@ -363,13 +385,22 @@ export class cimetiere extends Phaser.Scene{
         this.add.sprite(550,40,"piece_ui").setOrigin(0,0).setScrollFactor(0);
         blocFlacon = this.add.sprite(2,110,"bloc_flacon").setOrigin(0,0).setScrollFactor(0);
         blocAile = this.add.sprite(2,180,"bloc_aile").setVisible(false).setOrigin(0,0).setScrollFactor(0);
-        blocBleu = this.add.sprite(2,250,"bloc_bleu").setOrigin(0,0).setScrollFactor(0);
+        blocBleu = this.add.sprite(2,250,"bloc_bleu").setVisible(false).setOrigin(0,0).setScrollFactor(0);
         blocRouge = this.add.sprite(2,320,"bloc_rouge").setVisible(false).setOrigin(0,0).setScrollFactor(0);
         textBox = this.add.sprite(100,260,"textbox").setVisible(false).setOrigin(0,0).setScrollFactor(0);
         lifeUI = this.add.sprite(40,10,"niveauVie").setOrigin(0,0).setScrollFactor(0);
         scorePiece = this.add.text(620,50,"0",{fontSize:'40px',fill:'#FFFFFF', fontWeight : 'bold'}).setOrigin(0,0).setScrollFactor(0);
-        scoreBleu = this.add.text(55,275,"0",{fontSize:'20px',fill:'#FFFFFF', fontWeight : 'bold'}).setOrigin(0,0).setScrollFactor(0);
+        scoreBleu = this.add.text(55,275,"0",{fontSize:'20px',fill:'#FFFFFF', fontWeight : 'bold'}).setVisible(false).setOrigin(0,0).setScrollFactor(0);
         scoreRouge = this.add.text(55,345,"0",{fontSize:'20px',fill:'#FFFFFF', fontWeight : 'bold'}).setVisible(false).setOrigin(0,0).setScrollFactor(0);
+
+        // préparation des messages
+        // message game over
+        over1 = this.add.text(260,305, "Votre lumière s'est éteinte",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        over2 = this.add.text(240,350, "(appuyez sur F5 pour recommencer)",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        
+        // message loot aile
+        aile1 = this.add.text(250,305, "Il semble qu'un ancien gardien",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        aile2 = this.add.text(310,350, "a perdu ses ailes",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
 
         // séparation des calques selon l'effet souhaité sur le personnage
 
@@ -418,6 +449,30 @@ export class cimetiere extends Phaser.Scene{
             key: 'vie0',
             frames: [{ key: 'niveauVie' , frame :  5}],
         })
+
+        // Mettre à jour les informations de l'inventaire
+
+        if (this.entrance == 'jardin'){
+            nombre = this.majGold;
+            playerLife = this.majVie;
+            nombreBleu = this.majBleu;
+            nombreRouge = this.majRouge;
+
+            scorePiece.setText (+nombre);
+            scoreBleu.setText (+nombreBleu);
+            scoreRouge.setText (+nombreRouge);
+        }
+
+        if (this.entrance == 'crypte'){
+            nombre = this.majGold;
+            playerLife = this.majVie;
+            nombreBleu = this.majBleu;
+            nombreRouge = this.majRouge;
+
+            scorePiece.setText (+nombre);
+            scoreBleu.setText (+nombreBleu);
+            scoreRouge.setText (+nombreRouge);
+        }
     
     }
 
@@ -425,7 +480,9 @@ export class cimetiere extends Phaser.Scene{
     update(){
 
         // ajout des moyens de déplacement du personnage
-        if (cursors.left.isDown && (!cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown)){
+        // les controles à la manette ont été ajoutés mais ils entrainent un bug qui empeche de jouer
+
+        if ((cursors.left.isDown /*|| this.controller.left*/)&& (!cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown /*&& !this.controller.right && !this.controller.down && !this.controller.up*/) &&(lockTouche == false)){
             //this.playerState.isMoving = true;
             //this.player.direction = {x : -1, y : 0};
             player.setVelocityX(-PLAYER_SPEED); 
@@ -433,57 +490,58 @@ export class cimetiere extends Phaser.Scene{
             player.anims.play('gauche', true); 
         }
 
-        if (cursors.left.isDown && cursors.up.isDown && (!cursors.right.isDown && !cursors.down.isDown)){
+        if (((cursors.left.isDown && cursors.up.isDown) /*||(this.controller.left && this.controller.up)*/)&& (!cursors.right.isDown && !cursors.down.isDown /*&& !this.controller.down && !this.controller.right*/)&&(lockTouche == false)){
             player.setVelocityX(-PLAYER_SPEED * (Math.SQRT2)/2); 
             player.setVelocityY(-PLAYER_SPEED * (Math.SQRT2/2)); 
             player.anims.play('gauche', true); 
         }
 
-        if (cursors.left.isDown && cursors.down.isDown && (!cursors.right.isDown && !cursors.up.isDown)){
+        if (((cursors.left.isDown && cursors.down.isDown) /*||(this.controller.left && this.controller.down)*/) && (!cursors.right.isDown && !cursors.up.isDown /*&& !this.controller.right && !this.controller.up*/)&&(lockTouche == false)){
             player.setVelocityX(-PLAYER_SPEED * (Math.SQRT2/2));
             player.setVelocityY(PLAYER_SPEED * (Math.SQRT2/2));
             player.anims.play('gauche', true); 
         }
 
 
-        if (cursors.right.isDown && (!cursors.left.isDown && !cursors.down.isDown && !cursors.up.isDown)){ //sinon si la touche droite est appuyée
+        if ((cursors.right.isDown /*|| this.controller.right*/) && (!cursors.left.isDown && !cursors.down.isDown && !cursors.up.isDown /*&& !this.controller.left && !this.controller.down && !this.controller.up*/ )&&(lockTouche == false)){ //sinon si la touche droite est appuyée
             player.setVelocityX(PLAYER_SPEED);
             player.setVelocityY(0);
             player.anims.play('droite', true); 
         }
 
-        if (cursors.right.isDown && cursors.down.isDown && (!cursors.left.isDown && !cursors.up.isDown)){
+        if (((cursors.right.isDown && cursors.down.isDown) /*||(this.controller.right && this.controller.down)*/) && (!cursors.left.isDown && !cursors.up.isDown /*&& !this.controller.left && !this.controller.up*/)&&(lockTouche == false)){
             player.setVelocityX(PLAYER_SPEED * (Math.SQRT2)/2); 
             player.setVelocityY(PLAYER_SPEED * (Math.SQRT2)/2);
             player.anims.play('droite', true); 
         }
 
-        if (cursors.right.isDown && cursors.up.isDown && (!cursors.left.isDown && !cursors.down.isDown)){
+        if (((cursors.right.isDown && cursors.up.isDown) /*||(this.controller.right && this.controller.up)*/) && (!cursors.left.isDown && !cursors.down.isDown /*&& !this.controller.down && !this.controller.left*/)&&(lockTouche == false)){
             player.setVelocityX(PLAYER_SPEED * (Math.SQRT2)/2); 
             player.setVelocityY(-PLAYER_SPEED * (Math.SQRT2)/2);
             player.anims.play('droite', true); 
         }
 
-        if (cursors.down.isDown && (!cursors.right.isDown && !cursors.left.isDown && !cursors.up.isDown)){
+        if ((cursors.down.isDown /*|| this.controller.down*/) && (!cursors.right.isDown && !cursors.left.isDown && !cursors.up.isDown /*&& !this.controller.right && !this.controller.left && !this.controller.up*/)&&(lockTouche == false)){
             player.setVelocityX(0);
             player.setVelocityY(PLAYER_SPEED);
             player.anims.play('face',true);
         }
 
-        if (cursors.up.isDown && (!cursors.right.isDown && !cursors.down.isDown && !cursors.left.isDown)){
+        if ((cursors.up.isDown /*|| this.controller.up*/)&& (!cursors.right.isDown && !cursors.down.isDown && !cursors.left.isDown  /*&& !this.controller.right && !this.controller.down && !this.controller.left*/)&&(lockTouche == false)){
             player.setVelocityX(0);
             player.setVelocityY(-PLAYER_SPEED);
             player.anims.play('dos',true);
         }
 
-        if (!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown){ 
+        if ((!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown && lockTouche == false) /*|| (!this.controller.left && !this.controller.right && !this.controller.up && this.controller.down && lockTouche == false)*/){ 
             player.setVelocityX(0);
             player.setVelocityY(0); 
             player.anims.play('idle',true); 
         }
 
-        if (atk.isDown &&!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown){ 
-
+        if (atk.isDown &&!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown && (lockTouche == false)){ 
+            player.setVelocityX(0);
+            player.setVelocityY(0); 
             player.anims.play('attaque',true); 
         }
 
@@ -506,6 +564,20 @@ export class cimetiere extends Phaser.Scene{
         if (playerLife == 0){
             lifeUI.anims.play('vie0', true);
         }
+
+        // mise en place du game over
+        if (playerLife <=0 ){
+            gameOver = true;
+            lockTouche = true;
+        }
+    
+        if(gameOver){
+            textBox.setVisible(true);
+            over1.setVisible(true);
+            over2.setVisible(true);
+            return;
+        }
+
 
         // animation des ennemis
         // destruction des ennemis
@@ -561,16 +633,39 @@ export class cimetiere extends Phaser.Scene{
             blocRouge.setVisible(true);
             scoreRouge.setVisible(true);
         }
+
+        // vérifier si le joueur n'a plus de flamme pour les retirer de l'invenatire
+        if (nombreBleu == 0){
+            blocBleu.setVisible(false);
+            scoreBleu.setVisible(false);
+        }
+        if (nombreRouge == 0){
+            blocRouge.setVisible(false);
+            scoreRouge.setVisible(false);
+        }
+        
             
     }
 
 
     sceneCrypte(){
-        this.scene.start("crypte")
+        this.scene.start("crypte",{
+            entrance : "cimetiere", 
+            transfertVie : playerLife, 
+            transfertGold : nombre,
+            transferBleu : nombreBleu,
+            transfertRouge : nombreRouge,
+        })
     }
 
     sceneJardin(){
-        this.scene.start("jardin")
+        this.scene.start("jardin",{
+            entrance : "cimetiere", 
+            transfertVie : playerLife, 
+            transfertGold : nombre,
+            transferBleu : nombreBleu,
+            transfertRouge : nombreRouge,
+        })
     }
 
     degat(){
@@ -614,17 +709,22 @@ export class cimetiere extends Phaser.Scene{
         if (this.entrance == "jardin"){
             player.x = 2080
             player.y = 3200
+            playerLife = playerLife - 1;
+            if (nombre >> 0){
+                nombre = nombre -1;
+            }
+            scorePiece.setText ( + nombre);
         }
 
         if (this.entrance == "crypte"){
             player.x = 2080
             player.y = 416
+            playerLife = playerLife - 1;
+            if (nombre >> 0){
+                nombre = nombre -1;
+            }
+            scorePiece.setText ( + nombre);
         }
-
-        if (nombre >> 0){
-            nombre = nombre -1;
-        }
-        scorePiece.setText ( + nombre);
     }
 
     obtention(){
@@ -637,17 +737,15 @@ export class cimetiere extends Phaser.Scene{
         aileAcquis = true;
     
         // affichage d'un message expliquant la situation
-        //info=this.add.text(150,75,"Pingi a ramassé",{fontSize:'50px',fill:'#FF7F00'}).setScrollFactor(0);
-        //objet=this.add.text(210,125,"un PIOLET !",{fontSize:'50px',fill:'#FF7F00'}).setScrollFactor(0);
-        //fonction=this.add.text(50,210,"il peut désormais s'accrocher aux murs et ralentir sa chute",{fontSize:'18px',fill:'#FF7F00'}).setScrollFactor(0);
-        //comment=this.add.text(20,230,"pour cela, continuez d'avancer vers le mur en étant collé à lui",{fontSize:'18px',fill:'#FF7F00'}).setScrollFactor(0);
-        // le laisser afficher pendant quelques secondes avant de le faire disparaitre
-        //setTimeout(() => {
-       //     info.destroy();
-        //    objet.destroy();
-        //    fonction.destroy();
-        //    comment.destroy();
-        //},7000);
+        textBox.setVisible(true);
+        aile1.setVisible(true);
+        aile2.setVisible(true);
+
+        setTimeout(() => {
+            aile1.setVisible(false);
+            aile2.setVisible(false);
+            textBox.setVisible(false);
+        },5000);
     }
 
 };

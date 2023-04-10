@@ -1,8 +1,8 @@
 
 // création des variables
+var texteDebut = true
 var player
 var cursors
-var controller
 var tileset
 var keySpace
 var atk
@@ -14,14 +14,17 @@ var PLAYER_SPEED = 200
 var playerDegat = false 
 var playerLife = 5 
 var playerOpacity
+var gameOver
+var lockTouche = false
 
 // collision
 var collisiongrille
 var collisiontrou
 var collisioneau
 
+// competence
 var obtention
-var flaconAcquis = true
+var flaconAcquis = false
 var aileAcquis = false
 var feuAcquis = false
 
@@ -37,6 +40,38 @@ var scoreBleu
 var scoreRouge
 var textBox
 var lifeUI
+
+// texte
+var debut1
+var debut2
+
+var grille1
+var grille2
+
+var eau1
+var eau2
+
+var trou1
+var trou2
+
+var fontaine1
+var fontaine2
+
+var voeu1
+var voeu2
+
+var flacon1
+var flacon2
+
+var bleu1
+
+var over1
+var over2
+
+var firstChute = false
+var firstGrille = false
+var firstEau = false
+var firstBleu = false
 
 // collectable
 var piece1
@@ -92,6 +127,10 @@ var torche1
 var torcheFeu1
 var torche2
 var torcheFeu2
+var torcheFeu3
+var torche4
+var torcheFeu4
+var allumage4 = false
 
 
 // variables de la carte du jardin
@@ -111,6 +150,14 @@ var calque_decor_bis_ja
 export class jardin extends Phaser.Scene{
     constructor(){
         super("jardin");
+    }
+
+    init(data){
+        this.entrance = data.entrance
+        this.majVie = data.transfertVie
+        this.majGold = data.transfertGold
+        this.majBleu = data.transfertBleu
+        this.majRouge = data.transfertRouge
     }
 
     // préchargement de tous les éléments nécessaires au fonctionnement de la scène
@@ -277,12 +324,12 @@ export class jardin extends Phaser.Scene{
             frameRate: 10,
             repeat: -1,
         });    
-
+        // bug : l'animation ne se déclenche pas entièrement
     
 
 
         // affichage des ennemis
-        ennemi1 = this.physics.add.sprite(1535,1680,"ennemi_alpha");
+        ennemi1 = this.physics.add.sprite(1000,1680,"ennemi_alpha");
         ennemi1.setSize(25,32).setOffset(20,20);
 
         //ennemi1 = this.physics.add.sprite(1535,1680,"ennemi_alpha");
@@ -327,8 +374,8 @@ export class jardin extends Phaser.Scene{
 
         this.tweens.add({
             targets : ennemi1,
-            x: 930,
-            duration: 1900,
+            x: 1930,
+            duration: 8000,
             repeat : -1,
             yoyo : true
         });
@@ -387,11 +434,22 @@ export class jardin extends Phaser.Scene{
         // affichage des torches et preparation de l'interaction avec
         torche1 = this.physics.add.image(1300,850,"torche").setVisible(false);
         torcheFeu1 = this.physics.add.image(1300,850,"torche_feu");
+
         torche2 = this.physics.add.image(600,850,"torche");
         torcheFeu2 = this.physics.add.image(600,850,"torche_feu").setVisible(false);
 
+        torcheFeu3 = this.physics.add.image(1680,1600,"torche_feu")
+
+        torche4 = this.physics.add.image(900,2250,"torche");
+        torcheFeu4 = this.physics.add.image(900,2250,"torche_feu").setVisible(false);
+
         this.physics.add.overlap(player, torcheFeu1, this.lumiere1, null,this);
         this.physics.add.overlap(player, torche2, this.allume2, null,this);
+
+        this.physics.add.overlap(player, torcheFeu3, this.lumiere3, null,this);
+
+        this.physics.add.overlap(player, torche4, this.allume4, null,this);
+        this.physics.add.overlap(player, torcheFeu4, this.lumiere4, null,this);
     
         // création de la détéction du clavier
         cursors = this.input.keyboard.createCursorKeys();
@@ -403,8 +461,8 @@ export class jardin extends Phaser.Scene{
 
         // intégrer les commandes d'une manette
         this.input.gamepad.once('connected', function (pad) {
-            controller = pad;
-        });
+            this.controller = pad;
+        },this);
 
         // définir les collisions
 
@@ -417,10 +475,10 @@ export class jardin extends Phaser.Scene{
         // faire en sorte que le joueur collide avec les obstacles
 
         this.physics.add.collider(player, calque_obstacle_ja,);
-        this.physics.add.collider(player, calque_fontaine_ja,);
+        this.physics.add.collider(player, calque_fontaine_ja,this.msgFontaine,null,this);
 
         // integration de la collision avec une variable pour pouvoir la désactiver ensuite
-        collisiongrille = this.physics.add.collider(player, calque_grille_ja);
+        collisiongrille = this.physics.add.collider(player, calque_grille_ja,this.msgGrille, null,this);
 
         // faire en sorte que le joueur collide avec la brume
         this.physics.add.collider(player, brume1,);
@@ -450,10 +508,46 @@ export class jardin extends Phaser.Scene{
         scoreBleu = this.add.text(55,275,"0",{fontSize:'20px',fill:'#FFFFFF', fontWeight : 'bold'}).setVisible(false).setOrigin(0,0).setScrollFactor(0);
         scoreRouge = this.add.text(55,345,"0",{fontSize:'20px',fill:'#FFFFFF', fontWeight : 'bold'}).setVisible(false).setOrigin(0,0).setScrollFactor(0);
 
+        // création de toutes les phrases nécessaires
+        // message du debut
+        debut1 = this.add.text(165,305, "Il semble que les ténèbres ont contaminé cette zone",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        debut2 = this.add.text(240,350, "Je vais devoir purifier tout ça",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+
+        // message collision barrière première fois
+        grille1 = this.add.text(255,305, "Si seulement j'avais un moyen",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        grille2 = this.add.text(255,350, "pour traverser ces barrières",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+
+        // message collision eau première fois
+        eau1 = this.add.text(250,305, "Cette eau n'est pas bénite",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        eau2 = this.add.text(250,350, "mieux vaut ne pas la toucher",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+
+        // message chute dans trou première fois
+        trou1 = this.add.text(240,305, "Je devrais faire plus attention",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        trou2 = this.add.text(300,350, "la prochaine fois",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+
+        // message fontaine sans pièce
+        fontaine1 = this.add.text(250,305, "Cette fontaine est spéciale",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        fontaine2 = this.add.text(250,350, "Je devrais revenir plus tard",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+
+        // message fontaine avec pièce
+        voeu1 = this.add.text(270,305, "Voulez vous jetez une pièce",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        voeu2 = this.add.text(300,350, "et faire un voeu ?",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+
+        // message loot flacon
+        flacon1 = this.add.text(190,305, "Il semble que le coeur d'un autre gardien",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        flacon2 = this.add.text(200,350, "se trouve à l'intérieur de ce flaxon doré",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+
+        // message loot flamme bleu
+        bleu1 = this.add.text(250,305, "Ces flammes sont si lumineuse",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+
+        // message game over
+        over1 = this.add.text(260,305, "Votre lumière s'est éteinte",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        over2 = this.add.text(240,350, "(appuyez sur F5 pour recommencer)",{fontSize:'15px',fill:'#FFFFFF'}).setVisible(false).setScrollFactor(0);
+        
         // séparation des calques selon l'effet souhaité sur le personnage
 
         // le joueur prend des dégâts s'il touche l'eau
-        collisioneau = this.physics.add.collider(player, calque_eau_ja, this.degat, null, this);
+        collisioneau = this.physics.add.collider(player, calque_eau_ja, this.degatEau, null, this);
 
         // le joueur est téléporté au début du niveau s'il tombe dans un trou
         collisiontrou = this.physics.add.collider(player, calque_trou_ja, this.chute, null, this);
@@ -461,6 +555,7 @@ export class jardin extends Phaser.Scene{
         // le personnage perd de la vie s'il touche un ennemi
         this.physics.add.collider(player, ennemi1, this.degat, null, this);
         this.physics.add.collider(player, ennemi2, this.degat, null, this);
+        this.physics.add.collider(player, ennemi3, this.degat, null, this);
 
         // le score change s'il attrape une pièce
         this.physics.add.overlap(player,piece1,this.collecte1,null,this);
@@ -512,13 +607,29 @@ export class jardin extends Phaser.Scene{
             key: 'vie0',
             frames: [{ key: 'niveauVie' , frame :  5}],
         })
+
+        // Mettre à jour les informations de l'inventaire
+
+        if (this.entrance == 'cimetiere'){
+            nombre = this.majGold;
+            playerLife = this.majVie;
+            nombreBleu = this.majBleu;
+            nombreRouge = this.majRouge;
+
+            scorePiece.setText (+nombre);
+            scoreBleu.setText (+nombreBleu);
+            scoreRouge.setText (+nombreRouge);
+        }
     }
 
     // mise à jour des éléments au fil de l'avancement du joueur dans le niveau
     update(){
 
         // ajout des moyens de déplacement du personnage
-        if (cursors.left.isDown && (!cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown)){
+
+        // les controles à la manette ont été ajoutés mais ils entrainent un bug qui empeche de jouer
+
+        if ((cursors.left.isDown /*|| this.controller.left*/)&& (!cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown /*&& !this.controller.right && !this.controller.down && !this.controller.up*/) &&(lockTouche == false)){
             //this.playerState.isMoving = true;
             //this.player.direction = {x : -1, y : 0};
             player.setVelocityX(-PLAYER_SPEED); 
@@ -526,57 +637,58 @@ export class jardin extends Phaser.Scene{
             player.anims.play('gauche', true); 
         }
 
-        if (cursors.left.isDown && cursors.up.isDown && (!cursors.right.isDown && !cursors.down.isDown)){
+        if (((cursors.left.isDown && cursors.up.isDown) /*||(this.controller.left && this.controller.up)*/)&& (!cursors.right.isDown && !cursors.down.isDown /*&& !this.controller.down && !this.controller.right*/)&&(lockTouche == false)){
             player.setVelocityX(-PLAYER_SPEED * (Math.SQRT2)/2); 
             player.setVelocityY(-PLAYER_SPEED * (Math.SQRT2/2)); 
             player.anims.play('gauche', true); 
         }
 
-        if (cursors.left.isDown && cursors.down.isDown && (!cursors.right.isDown && !cursors.up.isDown)){
+        if (((cursors.left.isDown && cursors.down.isDown) /*||(this.controller.left && this.controller.down)*/) && (!cursors.right.isDown && !cursors.up.isDown /*&& !this.controller.right && !this.controller.up*/)&&(lockTouche == false)){
             player.setVelocityX(-PLAYER_SPEED * (Math.SQRT2/2));
             player.setVelocityY(PLAYER_SPEED * (Math.SQRT2/2));
             player.anims.play('gauche', true); 
         }
 
 
-        if (cursors.right.isDown && (!cursors.left.isDown && !cursors.down.isDown && !cursors.up.isDown)){ //sinon si la touche droite est appuyée
+        if ((cursors.right.isDown /*|| this.controller.right*/) && (!cursors.left.isDown && !cursors.down.isDown && !cursors.up.isDown /*&& !this.controller.left && !this.controller.down && !this.controller.up*/ )&&(lockTouche == false)){ //sinon si la touche droite est appuyée
             player.setVelocityX(PLAYER_SPEED);
             player.setVelocityY(0);
             player.anims.play('droite', true); 
         }
 
-        if (cursors.right.isDown && cursors.down.isDown && (!cursors.left.isDown && !cursors.up.isDown)){
+        if (((cursors.right.isDown && cursors.down.isDown) /*||(this.controller.right && this.controller.down)*/) && (!cursors.left.isDown && !cursors.up.isDown /*&& !this.controller.left && !this.controller.up*/)&&(lockTouche == false)){
             player.setVelocityX(PLAYER_SPEED * (Math.SQRT2)/2); 
             player.setVelocityY(PLAYER_SPEED * (Math.SQRT2)/2);
             player.anims.play('droite', true); 
         }
 
-        if (cursors.right.isDown && cursors.up.isDown && (!cursors.left.isDown && !cursors.down.isDown)){
+        if (((cursors.right.isDown && cursors.up.isDown) /*||(this.controller.right && this.controller.up)*/) && (!cursors.left.isDown && !cursors.down.isDown /*&& !this.controller.down && !this.controller.left*/)&&(lockTouche == false)){
             player.setVelocityX(PLAYER_SPEED * (Math.SQRT2)/2); 
             player.setVelocityY(-PLAYER_SPEED * (Math.SQRT2)/2);
             player.anims.play('droite', true); 
         }
 
-        if (cursors.down.isDown && (!cursors.right.isDown && !cursors.left.isDown && !cursors.up.isDown)){
+        if ((cursors.down.isDown /*|| this.controller.down*/) && (!cursors.right.isDown && !cursors.left.isDown && !cursors.up.isDown /*&& !this.controller.right && !this.controller.left && !this.controller.up*/)&&(lockTouche == false)){
             player.setVelocityX(0);
             player.setVelocityY(PLAYER_SPEED);
             player.anims.play('face',true);
         }
 
-        if (cursors.up.isDown && (!cursors.right.isDown && !cursors.down.isDown && !cursors.left.isDown)){
+        if ((cursors.up.isDown /*|| this.controller.up*/)&& (!cursors.right.isDown && !cursors.down.isDown && !cursors.left.isDown  /*&& !this.controller.right && !this.controller.down && !this.controller.left*/)&&(lockTouche == false)){
             player.setVelocityX(0);
             player.setVelocityY(-PLAYER_SPEED);
             player.anims.play('dos',true);
         }
 
-        if (!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown){ 
+        if ((!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown && lockTouche == false) /*|| (!this.controller.left && !this.controller.right && !this.controller.up && this.controller.down && lockTouche == false)*/){ 
             player.setVelocityX(0);
             player.setVelocityY(0); 
             player.anims.play('idle',true); 
         }
 
-        if (atk.isDown &&!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown){ 
-
+        if (atk.isDown &&!cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !cursors.up.isDown && (lockTouche == false)){ 
+            player.setVelocityX(0);
+            player.setVelocityY(0); 
             player.anims.play('attaque',true); 
         }
 
@@ -600,15 +712,43 @@ export class jardin extends Phaser.Scene{
             lifeUI.anims.play('vie0', true);
         }
 
+        // faire un message pour le début de la partie
+        if (this.entrance == "menu" && texteDebut == true){
+            textBox.setVisible(true);
+            debut1.setVisible(true);
+            debut2.setVisible(true);
+
+            setTimeout(() => {
+                debut1.setVisible(false);
+                debut2.setVisible(false);
+                textBox.setVisible(false);
+                texteDebut = false
+            },5000);
+        }
+
+        // mise en place du game over
+        if (playerLife <=0 ){
+            gameOver = true;
+            lockTouche = true;
+        }
+    
+        if(gameOver){
+            textBox.setVisible(true);
+            over1.setVisible(true);
+            over2.setVisible(true);
+            return;
+        }
+
         // animation des ennemis
         ennemi1.anims.play('alpha',true);
         ennemi2.anims.play('alpha',true);
         ennemi3.anims.play('alpha',true);
 
+        // création d'une varaiante de comportement
+        // les autres ennemis doivent poursuivre le joueur
+
         // vérifier la position du joueur par rapport à un ennemi afin que celui le poursuive
         // Calculer la distance entre le joueur et l'ennemi1
-        var distance1 = Phaser.Math.Distance.Between(player.x, player.y, ennemi1.x, ennemi1.y);
-
 
         // Si la distance est inférieure à 50 pixels, l'ennemi1 suit le joueur
         //if (!poursuite1 && distance1 < 200) {
@@ -645,42 +785,16 @@ export class jardin extends Phaser.Scene{
 
         // vérifier la position du joueur par rapport à l'ennemi pour le détruire
 
-        if (distance1 <100 && atk.isDown){
-            ennemi1.disableBody(true,true);
-            mort1 = true;
-            // faire apparaitre un loot 
-            loot1.setVisible(true);
-        }
         
 
         // faire la même chose pour le deuxième ennemi
-        var distance2 = Phaser.Math.Distance.Between(player.x, player.y, ennemi2.x, ennemi2.y);
-        if (distance2 <100 && atk.isDown){
-            //this.x = ennemi2.x;
-            //this.y = ennemi2.y;
-            ennemi2.disableBody(true,true);
-            mort2 = true;
-            loot2.setVisible(true);
-
-            // faire apparaitre le loot à l'endroit de la mort de l'ennemi
-            // problème : il y a trop d'apparitions
-            //this.loot = this.physics.add.sprite(this.x, this.y, 'flamme_bleu');
-            //this.physics.add.overlap(player, this.loot, () => {
-                //nombreBleu = nombreBleu +1;
-               // scoreBleu.setText ( + nombreBleu);
-                //this.loot.destroy();
-            //});
-        }
 
 
-
-        
 
         // vérifier si les 2 ennemis du jardin en bas à gauche sont mort pour faire disparaitre la brume
         if (mort1 == true && mort2 == true){
             brume1.disableBody(true,true);
         }
-
 
 
         // vérifier la position du joueur pour lancer le changement de scène
@@ -730,7 +844,17 @@ export class jardin extends Phaser.Scene{
             blocRouge.setVisible(true);
             scoreRouge.setVisible(true);
         }
-            
+
+        // vérifier si le joueur n'a plus de flamme pour les retirer de l'invenatire
+        if (nombreBleu == 0){
+            blocBleu.setVisible(false);
+            scoreBleu.setVisible(false);
+        }
+        if (nombreRouge == 0){
+            blocRouge.setVisible(false);
+            scoreRouge.setVisible(false);
+        }
+        
     }
 
     degat(){
@@ -769,13 +893,79 @@ export class jardin extends Phaser.Scene{
         }
     }
 
+    degatEau(){
+
+        // vérifier que le cooldown de degat est disponible
+        if (playerDegat == false && intangible == false){
+            
+
+            // retirer de la vie au joueur
+            // répercuter directement dans la jauge de vie
+            playerLife = playerLife - 1;
+            playerDegat = true;
+            playerOpacity = true;
+    
+            // montrer l'invulnérabilité du personnage ne le faisant clignoter avec l'opacité
+            this.time.addEvent({        
+                delay : 100,
+                callback : () => {
+                    if(playerOpacity){
+                        player.alpha = 0.25;
+                        playerOpacity = false
+                    }
+                    else {
+                        player.alpha = 1;
+                        playerOpacity = true;
+                    }
+                },
+                repeat : 19
+            })
+    
+            // activation du cooldown de degat
+            this.time.delayedCall(2000, () => {
+                playerDegat = false;
+                player.alpha = 1;
+            });  
+
+            // si c'est la première fois que le joueur touche de l'eau, le prévenir
+
+            if (firstEau == false){
+                textBox.setVisible(true);
+                eau1.setVisible(true);
+                eau2.setVisible(true);
+    
+                setTimeout(() => {
+                    eau1.setVisible(false);
+                    eau2.setVisible(false);
+                    textBox.setVisible(false);
+                    firstEau = true;
+                },5000);
+            }
+        }
+    }
+
     chute(){
         player.x = 2080
         player.y = 256
+        playerLife = playerLife - 1;
         if (nombre >> 0){
             nombre = nombre -1;
         }
         scorePiece.setText ( + nombre);
+
+        // si c'est la première fois que le joueur tombe dans un trou, le prévenir
+        if(firstChute == false){
+            textBox.setVisible(true);
+            trou1.setVisible(true);
+            trou2.setVisible(true);
+
+            setTimeout(() => {
+                trou1.setVisible(false);
+                trou2.setVisible(false);
+                textBox.setVisible(false);
+                firstChute = true;
+            },5000);
+        }
     }
 
     obtention(){
@@ -786,21 +976,72 @@ export class jardin extends Phaser.Scene{
         flacon.disableBody(true,true);
         // activer la variable pour rendre disponible la nouvelle capacité
         flaconAcquis = true;
-    
+
         // affichage d'un message expliquant la situation
-        //info=this.add.text(150,75,"Pingi a ramassé",{fontSize:'50px',fill:'#FF7F00'}).setScrollFactor(0);
-        //objet=this.add.text(210,125,"un PIOLET !",{fontSize:'50px',fill:'#FF7F00'}).setScrollFactor(0);
-        //fonction=this.add.text(50,210,"il peut désormais s'accrocher aux murs et ralentir sa chute",{fontSize:'18px',fill:'#FF7F00'}).setScrollFactor(0);
-        //comment=this.add.text(20,230,"pour cela, continuez d'avancer vers le mur en étant collé à lui",{fontSize:'18px',fill:'#FF7F00'}).setScrollFactor(0);
-        // le laisser afficher pendant quelques secondes avant de le faire disparaitre
-        //setTimeout(() => {
-       //     info.destroy();
-        //    objet.destroy();
-        //    fonction.destroy();
-        //    comment.destroy();
-        //},7000);
+        textBox.setVisible(true);
+        flacon1.setVisible(true);
+        flacon2.setVisible(true);
+
+        setTimeout(() => {
+            flacon1.setVisible(false);
+            flacon2.setVisible(false);
+            textBox.setVisible(false);
+        },5000);
+
     }
 
+    // si c'est la première fois que le joueur touche une grille, le prévenir
+    msgGrille(){
+        if (firstGrille == false){
+            textBox.setVisible(true);
+            grille1.setVisible(true);
+            grille2.setVisible(true);
+
+            setTimeout(() => {
+                grille1.setVisible(false);
+                grille2.setVisible(false);
+                textBox.setVisible(false);
+                firstGrille = true;
+            },5000);
+        }
+    }
+
+    // avertir le joueur de la fonction de la fontaine
+    msgFontaine(){
+        if(nombre == 0 ){
+            textBox.setVisible(true);
+            fontaine1.setVisible(true);
+            fontaine2.setVisible(true);
+
+            setTimeout(() => {
+                fontaine1.setVisible(false);
+                fontaine2.setVisible(false);
+                textBox.setVisible(false);
+            },5000);
+        }
+
+        if (nombre > 0){
+            textBox.setVisible(true);
+            voeu1.setVisible(true);
+            voeu2.setVisible(true);
+
+            // prévoir séquence d'achat ici
+
+            if (interagir.isDown){
+                nombre = nombre - 1
+                scorePiece.setText ( + nombre);
+
+                nombreRouge = nombreRouge + 1
+                scoreRouge.setText (+nombreRouge);
+            }
+
+            setTimeout(() => {
+                voeu1.setVisible(false);
+                voeu2.setVisible(false);
+                textBox.setVisible(false);
+            },5000);
+        }
+    }
 
     // ramassage des pièces
     collecte1(){
@@ -874,27 +1115,68 @@ export class jardin extends Phaser.Scene{
         }
     }
 
+    // récupérer le loot des ennemis
     recuperation1(){
-        loot1.disableBody (true,true);
-        nombreBleu = nombreBleu +1;
-        scoreBleu.setText ( + nombreBleu);
+        if (mort1 == true){
+            loot1.disableBody (true,true);
+            nombreBleu = nombreBleu +1;
+            scoreBleu.setText ( + nombreBleu);
+
+            if (firstBleu == false){
+                textBox.setVisible(true);
+                bleu1.setVisible(true);
+
+                setTimeout(() => {
+                    bleu1.setVisible(false);
+                    textBox.setVisible(false);
+                    firstBleu = true;
+                },3000);
+            }
+        }
     }
 
     recuperation2(){
-        loot2.disableBody (true,true);
-        nombreBleu = nombreBleu +1;
-        scoreBleu.setText ( + nombreBleu);
+        if (mort2 == true){
+            loot2.disableBody (true,true);
+            nombreBleu = nombreBleu +1;
+            scoreBleu.setText ( + nombreBleu);
+
+            if (firstBleu == false){
+                textBox.setVisible(true);
+                bleu1.setVisible(true);
+
+                setTimeout(() => {
+                    bleu1.setVisible(false);
+                    textBox.setVisible(false);
+                    firstBleu = true;
+                },3000);
+            }
+        }
     }
 
     recuperation3(){
-        loot3.disableBody (true,true);
-        nombreBleu = nombreBleu +1;
-        scoreBleu.setText ( + nombreBleu);
+        if (mort3 == true){
+            loot3.disableBody (true,true);
+            nombreBleu = nombreBleu +1;
+            scoreBleu.setText ( + nombreBleu);
+
+            if (firstBleu == false){
+                textBox.setVisible(true);
+                bleu1.setVisible(true);
+
+                setTimeout(() => {
+                    bleu1.setVisible(false);
+                    textBox.setVisible(false);
+                    firstBleu = true;
+                },3000);
+            }
+        }
     }
 
+    // tuer un ennemi en étant sous une torche
     lumiere1(){
         var distance3 = Phaser.Math.Distance.Between(player.x, player.y, ennemi3.x, ennemi3.y);
-        if (distance3 <100 && atk.isDown){
+        if (distance3 <100 && atk.isDown && intangible == false){
             ennemi3.disableBody(true,true);
             mort3 = true;
             // faire apparaitre un loot 
@@ -902,6 +1184,7 @@ export class jardin extends Phaser.Scene{
         }
     }
 
+    // allumer une torche
     allume2(){
         if (nombreBleu > 0 && interagir.isDown){
             torche2.disableBody (true,true);
@@ -911,12 +1194,61 @@ export class jardin extends Phaser.Scene{
         }
     }
 
-    // lancer la scène cimetière et prévenir quelle entré doir être utilisé
-    sceneCimetiere(){
-        this.scene.start("cimetiere",{entrance : "jardin"})
+    lumiere3(){
+        var distance1 = Phaser.Math.Distance.Between(player.x, player.y, ennemi1.x, ennemi1.y);
+        if (distance1 <100 && atk.isDown && intangible == false){
+            ennemi1.disableBody(true,true);
+            mort1 = true;
+            // faire apparaitre un loot 
+            loot1.setVisible(true);
+        }
+    }
+
+    allume4 (){
+        if (nombreBleu > 0 && interagir.isDown){
+            torche4.disableBody (true,true);
+            torcheFeu4.setVisible(true);
+            allumage4 = true;
+            nombreBleu = nombreBleu -1;
+            scoreBleu.setText ( + nombreBleu);
+        }
 
     }
 
+    lumiere4(){
+        var distance2 = Phaser.Math.Distance.Between(player.x, player.y, ennemi2.x, ennemi2.y);
+        if (distance2 <100 && atk.isDown && intangible == false && allumage4 == true){
+            //this.x = ennemi2.x;
+            //this.y = ennemi2.y;
+            ennemi2.disableBody(true,true);
+            mort2 = true;
+            loot2.setVisible(true);
 
+            // autre variante d'apparition du loot
+
+            // faire apparaitre le loot à l'endroit de la mort de l'ennemi
+            // problème : il y a trop d'apparitions
+            //this.loot = this.physics.add.sprite(this.x, this.y, 'flamme_bleu');
+            //this.physics.add.overlap(player, this.loot, () => {
+                //nombreBleu = nombreBleu +1;
+               // scoreBleu.setText ( + nombreBleu);
+                //this.loot.destroy();
+            //});
+
+            // bug : trop de loot aparaisse
+        }
+    }
+
+    // lancer la scène cimetière et prévenir quelle entré doir être utilisé
+    sceneCimetiere(){
+        this.scene.start("cimetiere",{
+            entrance : "jardin", 
+            transfertVie : playerLife, 
+            transfertGold : nombre,
+            transferBleu : nombreBleu,
+            transfertRouge : nombreRouge,
+        })
+
+    }
 
 };
